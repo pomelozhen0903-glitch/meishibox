@@ -13,9 +13,620 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
-  <script>
-  // ⚠️ 請務必將下方網址換成您 GAS 部署後的網址 (以 /exec 結尾)
+  <style>
+    /* --- CSS 變數 --- */
+    :root { 
+      --primary: #007AFF; 
+      --bg: #F2F2F7;      
+      --card: #FFFFFF; 
+      --text: #000000; 
+      --text-sec: #8E8E93;
+      --danger: #FF3B30;  
+      --separator: rgba(60, 60, 67, 0.2); 
+      --input-bg: rgba(118, 118, 128, 0.12);
+      --glass-bg: rgba(255, 255, 255, 0.85); /* 液態玻璃透明度 */
+      --tab-bg: #E5E5EA;
+      --tab-active-bg: #FFFFFF;
+      --tab-active-text: #000000;
+      --skeleton-base: #F2F2F7;
+      --skeleton-highlight: #E5E5EA;
+    }
+
+    [data-theme="dark"] {
+      --primary: #0A84FF;
+      --bg: #000000;
+      --card: #1C1C1E;
+      --text: #FFFFFF; 
+      --text-sec: #98989D;
+      --danger: #FF453A;
+      --separator: rgba(84, 84, 88, 0.5);
+      --input-bg: rgba(118, 118, 128, 0.24);
+      --glass-bg: rgba(30, 30, 30, 0.85);
+      --tab-bg: #2C2C2E;
+      --tab-active-bg: #636366;
+      --tab-active-text: #FFFFFF;
+      --skeleton-base: #1C1C1E;
+      --skeleton-highlight: #2C2C2E;
+    }
+    
+    body { 
+      background-color: var(--bg); 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+      margin: 0; padding-bottom: 120px; color: var(--text);
+      transition: background-color 0.3s ease, color 0.3s ease;
+      overscroll-behavior-y: none;
+      -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    input, textarea { -webkit-user-select: text; user-select: text; }
+
+    /* Header (液態玻璃) */
+    .sticky-header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--glass-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid var(--separator); padding-bottom: 8px; transition: background 0.3s;
+    }
+    .app-header { background: transparent; padding: 10px 16px 6px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .app-title { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; } 
+    
+    .sort-select { border: none; background: var(--input-bg); padding: 6px 12px; border-radius: 14px; font-size: 13px; color: var(--primary); font-weight: 600; outline: none; margin-left: 8px; }
+    
+    /* Search Bar */
+    .search-bar { padding: 0 16px 10px 16px; background: transparent; }
+    .search-input-wrap { background: var(--input-bg); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; }
+    .search-input-wrap i { color: var(--text-sec); font-size: 14px; }
+    .search-input-wrap input { border: none; background: transparent; flex: 1; margin-left: 6px; font-size: 17px; outline: none; color: var(--text); }
+    .clear-btn { display: none; color: var(--text-sec); font-size: 16px; cursor: pointer; padding: 4px; margin-left: 8px; }
+
+    /* Tab Bar */
+    .tab-bar { display: flex; overflow-x: auto; white-space: nowrap; padding: 4px 16px 8px 16px; gap: 8px; scrollbar-width: none; }
+    .tab-bar::-webkit-scrollbar { display: none; }
+    .tab-item { display: inline-block; padding: 7px 16px; border-radius: 18px; font-size: 15px; color: var(--text-sec); font-weight: 600; background: transparent; cursor: pointer; transition: all 0.2s; -webkit-touch-callout: none; }
+    .tab-item.active { background: var(--tab-active-bg); color: var(--tab-active-text); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .sortable-ghost { opacity: 0.4; transform: scale(0.95); }
+
+    /* Contact List */
+    .contact-list { padding: 16px; }
+    .contact-card { 
+      background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 12px; 
+      display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.04); 
+      cursor: pointer; position: relative; transition: transform 0.2s, background 0.2s; 
+      -webkit-touch-callout: none;
+    }
+    .contact-card:active { transform: scale(0.98); opacity: 0.8; }
+    
+    .selection-mode .contact-card { padding-left: 50px; transform: scale(1); }
+    .select-checkbox { 
+      position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+      width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--text-sec); 
+      display: none; align-items: center; justify-content: center; background: var(--card);
+    }
+    .selection-mode .select-checkbox { display: flex; }
+    .select-checkbox.checked { background: var(--primary); border-color: var(--primary); }
+    .select-checkbox.checked::after { content: '✓'; color: white; font-size: 14px; font-weight: bold; }
+
+    .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 14px; background: var(--tab-bg); border: 0.5px solid var(--separator); }
+    .info { flex: 1; min-width: 0; }
+    .name { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .title { font-size: 14px; color: var(--text-sec); margin-bottom: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .company { font-size: 14px; color: var(--primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tag-badge { font-size: 11px; color: #fff; padding: 3px 8px; border-radius: 6px; margin-left: auto; align-self: flex-start; font-weight: 600; background: var(--text-sec); flex-shrink: 0; }
+
+    /* FAB & Buttons */
+    .fab-group { position: fixed; bottom: 30px; right: 20px; display: flex; flex-direction: column; gap: 15px; align-items: flex-end; z-index: 90; transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .fab-main { width: 56px; height: 56px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 12px rgba(0,122,255,0.4); cursor: pointer; transition: transform 0.2s; }
+    .fab-main:active { transform: scale(0.9); }
+    .fab-menu { display: none; flex-direction: column; gap: 12px; align-items: flex-end; margin-bottom: 10px; }
+    .fab-menu.show { display: flex; }
+    .fab-item { display: flex; align-items: center; gap: 10px; }
+    .fab-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--card); color: var(--text); display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; font-size: 16px; }
+    .fab-label { background: var(--glass-bg); color: var(--text); padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+    .scroll-top-btn {
+      position: fixed; bottom: 100px; right: 26px; width: 44px; height: 44px; 
+      background: var(--glass-bg); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      border-radius: 50%; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 18px; cursor: pointer;
+      opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 80;
+    }
+    .scroll-top-btn.show { opacity: 1; pointer-events: auto; }
+
+    /* Batch Bar */
+    .batch-bar {
+      position: fixed; bottom: 0; left: 0; width: 100%; background: var(--glass-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-top: 0.5px solid var(--separator); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;
+      z-index: 95; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      box-sizing: border-box; padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+    .batch-bar.active { transform: translateY(0); }
+    .batch-left { display: flex; align-items: center; gap: 12px; }
+    .btn-cancel-select { width: 28px; height: 28px; border-radius: 50%; background: rgba(118, 118, 128, 0.15); display: flex; align-items: center; justify-content: center; color: var(--text-sec); cursor: pointer; font-size: 14px; }
+    .btn-cancel-select:active { background: rgba(118, 118, 128, 0.3); color: var(--text); }
+    .batch-actions { display: flex; gap: 12px; }
+    .btn-batch { padding: 10px 20px; border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s; position: relative; z-index: 100; }
+    .btn-batch-primary { background: var(--primary); color: white; }
+    .btn-batch-danger { background: rgba(255, 59, 48, 0.1); color: var(--danger); }
+
+    /* Context Menu */
+    .context-menu {
+      position: fixed; display: none; flex-direction: column; background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 2000; min-width: 140px; animation: popIn 0.2s;
+    }
+    @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+    .context-item { padding: 12px 16px; font-size: 15px; color: var(--text); display: flex; align-items: center; gap: 10px; border-bottom: 0.5px solid var(--separator); cursor: pointer; }
+    .context-item:last-child { border-bottom: none; }
+
+    /* Modals & Forms */
+    .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); z-index: 200; transform: translateY(100%); transition: transform 0.3s; display: flex; flex-direction: column; }
+    .modal.active { transform: translateY(0); }
+    .modal-header { 
+      background: var(--glass-bg); backdrop-filter: blur(20px); padding: 10px 16px; 
+      border-bottom: 0.5px solid var(--separator); display: flex; justify-content: space-between; align-items: center; 
+      min-height: 44px; box-sizing: border-box; width: 100%; 
+    }
+    
+    /* [修改] 強制按鈕為文字，解決 icon 消失問題 */
+    .btn-text { background: none; border: none; font-size: 17px; color: var(--primary); cursor: pointer; padding: 4px 8px; font-weight: 400; }
+    .btn-text.primary { font-weight: 600; }
+    .btn-text.danger { color: var(--danger); }
+    .btn-text.cancel { color: var(--text-sec); }
+    
+    .btn-icon-circle { width: 32px; height: 32px; border-radius: 50%; background: var(--input-bg); color: var(--text); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+    
+    .modal-body { flex: 1; overflow-y: auto; padding: 20px 16px; }
+    .modal-bottom-sheet { top: auto; bottom: 0; height: auto; border-radius: 16px 16px 0 0; background: var(--card); box-shadow: 0 -4px 30px rgba(0,0,0,0.15); }
+
+    /* [修改] Alert Style Modal (置中) */
+    .modal-alert {
+        background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
+        align-items: center; justify-content: center; padding: 20px;
+        opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        transform: none !important; /* 覆蓋 slide */
+    }
+    .modal-alert.active { opacity: 1; pointer-events: auto; }
+    .alert-box {
+        background: #2C2C2E; /* 深色背景，模擬截圖 */
+        width: 100%; max-width: 300px;
+        border-radius: 14px; overflow: hidden; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        color: white;
+    }
+    [data-theme="dark"] .alert-box { background: #1C1C1E; border: 1px solid #333; }
+    .alert-header { padding: 20px 20px 10px 20px; font-size: 16px; font-weight: 600; text-align: center; color: #fff; }
+    .alert-body { padding: 0 20px 20px 20px; }
+    .alert-input { 
+        width: 100%; box-sizing: border-box; padding: 8px 12px; 
+        background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); 
+        border-radius: 8px; font-size: 16px; color: #fff; outline: none; 
+    }
+    .alert-footer { display: flex; border-top: 0.5px solid rgba(255,255,255,0.15); }
+    .alert-btn { 
+        flex: 1; padding: 12px; border: none; background: transparent; 
+        font-size: 16px; cursor: pointer; color: #0A84FF; font-weight: 600;
+        transition: background 0.2s;
+    }
+    .alert-btn:active { background: rgba(255,255,255,0.1); }
+    .alert-btn.cancel { font-weight: 400; border-right: 0.5px solid rgba(255,255,255,0.15); color: #98989D; }
+
+    /* [修改] Color Picker Grid (美觀版) */
+    .color-grid {
+        display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; justify-items: center; padding: 10px 0;
+    }
+    .color-circle {
+        width: 44px; height: 44px; border-radius: 50%; cursor: pointer;
+        border: 2px solid rgba(0,0,0,0.1); transition: transform 0.2s;
+    }
+    .color-circle.selected { transform: scale(1.1); border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary); }
+    .color-circle:active { transform: scale(0.9); }
+    
+    /* 自訂彩虹按鈕 */
+    .color-circle.rainbow {
+        background: linear-gradient(135deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .color-circle.rainbow i { color: white; font-size: 18px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); }
+
+    .color-preview-box {
+        width: 100%; height: 50px; border-radius: 10px; margin-bottom: 20px;
+        display: flex; align-items: center; justify-content: center;
+        color: white; font-weight: bold; font-size: 15px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        border: 1px solid var(--separator);
+        transition: background 0.3s;
+    }
+
+    /* [修改] 圖片顯示優化 */
+    .img-upload-area { margin-bottom: 20px; text-align: center; }
+    .img-upload-area img { 
+        width: 100%; height: auto; object-fit: cover; 
+        background: var(--tab-bg); border-radius: 12px; 
+        display: block; margin: 0 auto 16px auto; 
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .form-section { background: var(--card); border-radius: 10px; padding: 0 16px; margin-bottom: 24px; overflow: hidden; }
+/* 2. 整行容器：確保垂直置中 */
+.input-group {
+  display: flex;
+  align-items: center;        /* 垂直置中 */
+  border-bottom: 0.5px solid var(--separator); /* 維持原本底線 */
+  padding: 12px 0;
+  position: relative;
+}    .input-group:last-child { border-bottom: none; }
+    .section-title { font-size: 13px; color: var(--text-sec); margin-bottom: 8px; margin-left: 16px; text-transform: uppercase; }
+    .input-label { width: 80px; font-size: 16px; color: var(--text); flex-shrink: 0; }
+/* 1. 輸入框設定：強制透明，移除所有邊框與陰影，恢復原本質感 */
+.input-field {
+  flex: 1;                    /* 讓輸入框佔滿剩餘空間 */
+  min-width: 0;               /* 防止內容過長時撐開版面 */
+  background: transparent !important; /* 關鍵：移除白色背景 */
+  border: none !important;    /* 關鍵：移除邊框 */
+  box-shadow: none !important;/* 移除陰影 */
+  font-size: 16px;
+  color: var(--primary);      /* 字體維持原本設定 */
+  padding: 4px 8px;           /*稍微留點呼吸空間*/
+  outline: none;              /*移除點擊時的黑框*/
+}    .action-icon { color: var(--primary); font-size: 20px; margin-left: 12px; cursor: pointer; padding: 8px; }
+    /* 3. 右側按鈕區：專門用來包住那些 icon */
+.action-box {
+  display: flex;
+  align-items: center;
+  margin-left: auto;          /* 關鍵：自動推到最右邊 */
+  padding-left: 8px;
+  gap: 16px;                  /* 兩個 icon 之間的距離，設寬一點才好看 */
+  flex-shrink: 0;             /* 禁止被擠壓 */
+}
+
+/* --- [修改] 統一按鈕樣式 (全部變暗) --- */
+
+/* 1. 定義所有右側按鈕的基礎樣式 */
+.btn-action, .btn-copy {
+  font-size: 20px;
+  padding: 4px 8px;           /* 增加觸控範圍 */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+  
+  /* [關鍵修改] 統一顏色與透明度 */
+  color: var(--primary);      /* 維持藍色系 */
+  opacity: 0.6;               /* 預設全部變暗 (半透明) */
+}
+
+/* 2. 當滑鼠移過去或手指按下去時，一起變亮 */
+.btn-action:hover, .btn-action:active,
+.btn-copy:hover, .btn-copy:active {
+  opacity: 1;                 /* 變回全亮 */
+}
+
+
+/* 主要功能 (電話/地圖) - 亮藍色 */
+.btn-action {
+  color: var(--primary);
+}
+
+/* 複製功能 - 稍微透明一點，做出層次感 */
+.btn-copy {
+  color: var(--primary);
+  opacity: 0.6;               /* 設為 0.6 讓它不要跟主要按鈕搶戲 */
+}
+.btn-copy:hover, .btn-copy:active {
+  opacity: 1;                 /* 點擊時變亮 */
+}
+    .warning-box { background: rgba(255, 59, 48, 0.1); color: var(--danger); padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
+    .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--glass-bg); backdrop-filter: blur(10px); color: var(--text); padding: 12px 24px; border-radius: 30px; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .loader { position: fixed; inset: 0; background: var(--glass-bg); backdrop-filter: blur(5px); z-index: 300; display: none; flex-direction: column; align-items: center; justify-content: center; }
+    .spinner { border: 3px solid rgba(0,0,0,0.1); border-top: 3px solid var(--primary); border-radius: 50%; width: 32px; height: 32px; animation: spin 0.8s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* Cropper */
+    .crop-modal-body { flex: 1; background: #000; position: relative; display: flex; flex-direction: column; height: calc(100% - 50px); }
+    .crop-container { flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .cropper-bg { background: transparent !important; }
+    .scan-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; display: none; }
+    .scan-line { position: absolute; width: 100%; height: 4px; background: linear-gradient(90deg, rgba(0,122,255,0), rgba(0,122,255,0.9), rgba(0,122,255,0)); box-shadow: 0 0 15px rgba(0, 122, 255, 0.6); top: -10%; }
+    .scanning .scan-overlay { display: block; }
+    .scanning .scan-line { animation: scanDown 1.5s ease-in-out forwards; }
+    @keyframes scanDown { 0% { top: -10%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 110%; opacity: 0; } }
+    .floating-toolbar { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); display: flex; gap: 32px; padding: 16px 36px; background: rgba(44, 44, 46, 0.75); backdrop-filter: saturate(180%) blur(20px); border-radius: 30px; z-index: 10; opacity: 0; transition: opacity 0.3s; }
+    .floating-toolbar.show { opacity: 1; }
+    .tool-btn { color: white; font-size: 22px; cursor: pointer; }
+    .btn-sm { padding: 6px 14px; border-radius: 14px; border: 1px solid var(--separator); background: var(--card); font-size: 13px; color: var(--primary); cursor: pointer; font-weight: 500; }
+    .btn-del-img { color: var(--danger); }
+  </style>
+</head>
+<body>
+
+<div class="sticky-header">
+  <div class="app-header">
+    <div class="header-left">
+      <div class="app-title">Meishi Box</div>
+      <select class="sort-select" onchange="sortList(this.value)">
+        <option value="new">最新</option>
+        <option value="name">姓名</option>
+        <option value="company">公司</option>
+        <option value="tag">標籤</option>
+      </select>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <button type="button" class="btn-icon-circle" onclick="toggleTheme()" title="切換模式">
+        <i class="fas fa-moon" id="themeIcon"></i>
+      </button>
+      <button type="button" class="btn-text" id="btnSelect" onclick="toggleSelectionMode()">選取</button>
+      <button type="button" class="btn-text primary" onclick="initLoad()" title="更新">
+        <i class="fas fa-sync-alt" id="refreshIcon"></i>
+      </button>
+    </div>
+  </div>
+  <div class="search-bar">
+    <div class="search-input-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="搜尋" oninput="toggleSearchClear()" onkeyup="applyFilter()">
+      <i class="fas fa-times-circle clear-btn" id="searchClearBtn" onclick="clearSearch()"></i>
+    </div>
+  </div>
+  <div id="tabBar" class="tab-bar"></div>
+</div>
+
+<div id="tabContextMenu" class="context-menu">
+  <div class="context-item" onclick="openRenameModal()"><i class="fas fa-edit"></i> 編輯名稱</div>
+  <div class="context-item" onclick="openColorModal()"><i class="fas fa-palette"></i> 調整顏色</div>
+</div>
+
+<div id="contactList" class="contact-list"></div>
+<div id="scrollTopBtn" class="scroll-top-btn" onclick="scrollToTop()"><i class="fas fa-arrow-up"></i></div>
+
+<div class="fab-group" id="fabGroup">
+  <div class="fab-menu" id="fabMenu">
+    <div class="fab-item" onclick="openManualAdd()"><span class="fab-label">手動新增</span><div class="fab-btn"><i class="fas fa-pen"></i></div></div>
+    <div class="fab-item" onclick="triggerFile('upload')"><span class="fab-label">上傳圖片</span><div class="fab-btn"><i class="fas fa-image"></i></div></div>
+    <div class="fab-item" onclick="triggerFile('camera')"><span class="fab-label">相機拍照</span><div class="fab-btn"><i class="fas fa-camera"></i></div></div>
+  </div>
+  <div class="fab-main" onclick="toggleFab()"><i class="fas fa-plus"></i></div>
+</div>
+
+<div class="batch-bar" id="batchBar">
+  <div class="batch-left">
+    <div class="btn-cancel-select" onclick="toggleSelectionMode()" title="取消"><i class="fas fa-times"></i></div>
+    <div class="batch-info" id="batchInfo">已選取 0 筆</div>
+  </div>
+  <div class="batch-actions">
+    <button type="button" class="btn-batch btn-batch-danger" onclick="event.stopPropagation(); executeBatchDelete()">刪除</button>
+    <button type="button" class="btn-batch btn-batch-primary" onclick="event.stopPropagation(); openBatchTagModal()">標籤</button>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
+<input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleFileSelect(this)">
+
+<div id="cropModal" class="modal">
+  <div class="modal-header" style="background: rgba(0,0,0,0.4); color: white; border: none; position: absolute; width: 100%; top: 0; left: 0; z-index: 10;">
+    <button type="button" class="btn-text" style="color: rgba(255,255,255,0.8);" onclick="closeModal('cropModal')">取消</button>
+    <div class="modal-title" style="color:white">裁切名片</div>
+    <button type="button" class="btn-text" style="color: white; font-weight:600;" onclick="confirmCrop()">確認</button>
+  </div>
+
+  <div class="crop-modal-body" id="cropModalBody">
+    <div class="crop-container">
+        <img id="cropImage" style="max-width: 100%; opacity: 0; transition: opacity 0.3s;">
+        <div class="scan-overlay"><div class="scan-line"></div></div>
+    </div>
+    <div class="floating-toolbar" id="cropToolbar">
+        <i class="fas fa-undo tool-btn" onclick="cropper.rotate(-90)"></i>
+        <i class="fas fa-sync tool-btn" onclick="cropper.reset()"></i>
+        <i class="fas fa-redo tool-btn" onclick="cropper.rotate(90)"></i>
+    </div>
+  </div>
+</div>
+
+
+<div id="detailModal" class="modal">
+  <div class="modal-header">
+    <button type="button" class="btn-text cancel" onclick="closeModal('detailModal')">取消</button>
+    <div class="modal-title" id="formTitle">詳細資料</div>
+    <div style="display:flex;">
+        <button type="button" class="btn-text" onclick="copyContactInfo()" title="複製"><i class="fas fa-copy"></i></button>
+        <button type="button" class="btn-text primary" onclick="saveContact()">儲存</button>
+    </div>
+  </div>
+  <div class="modal-body">
+            <div class="img-upload-area">
+            <img id="previewImg" src="" style="width: 100%; height: auto; max-height: 300px; object-fit: contain; background: var(--tab-bg); border-radius: 12px; display:block; margin: 0 auto 12px auto;">
+
+      <div class="img-controls">
+
+
+        <button type="button" class="btn-sm" onclick="triggerLocalUpload()">更換照片</button>
+        <button type="button" class="btn-sm btn-del-img" onclick="removePreviewImage()">移除</button>
+      </div>
+    </div>
+    <input type="file" id="localImgInput" accept="image/*" style="display:none" onchange="handleLocalImage(this)">
+    <input type="hidden" id="rowIndex"><input type="hidden" id="imgUrlHidden">
+
+<div class="section-title">基本資料</div>
+    <div class="form-section">
+      <div class="input-group">
+        <label class="input-label">姓名</label>
+        <input type="text" id="inputName" class="input-field" placeholder="必填">
+<div class="action-box">
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
+  </div>      </div>
+      <div class="input-group">
+        <label class="input-label">職稱</label>
+        <input type="text" id="inputTitle" class="input-field" placeholder="職稱">
+<div class="action-box">
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
+  </div>      </div>
+      <div class="input-group">
+        <label class="input-label">公司</label>
+        <input type="text" id="inputCompany" class="input-field" placeholder="公司名稱">
+<div class="action-box">
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
+  </div>      </div>
+    </div>
+
+    <div class="section-title">聯絡方式</div>
+    <div class="form-section">
+<div class="input-group">
+  <label class="input-label">手機</label>
+  <input type="text" id="inputPhone" class="input-field" placeholder="手機號碼">
+  <div class="action-box">
+    <i class="fas fa-mobile-alt btn-action" onclick="makeCall('inputPhone')"></i>
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputPhone')"></i>
+  </div>
+</div>
+<div class="input-group">
+  <label class="input-label">電話</label>
+  <input type="text" id="inputTelCompany" class="input-field" placeholder="公司電話">
+  <div class="action-box">
+    <i class="fas fa-tty btn-action" onclick="makeCall('inputTelCompany')"></i>
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputTelCompany')"></i>
+  </div>
+</div>
+      <div class="input-group">
+        <label class="input-label">信箱</label>
+        <input type="email" id="inputEmail" class="input-field" placeholder="電子信箱">
+<div class="action-box">
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
+  </div>      </div>
+      <div class="input-group">
+        <label class="input-label">網址</label>
+        <input type="text" id="inputWebsite" class="input-field" placeholder="網站">
+<div class="action-box">
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
+  </div>      </div>
+    </div>
+    
+    <div class="section-title">公司資料</div>
+    <div class="form-section">
+      <div class="input-group">
+        <label class="input-label">統編</label>
+        <input type="text" id="inputTaxId" class="input-field" placeholder="統一編號">
+<div class="action-box">
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
+  </div>      </div>
+<div class="input-group">
+  <label class="input-label">地址</label>
+  <input type="text" id="inputAddress" class="input-field" placeholder="地址">
+  <div class="action-box">
+    <i class="fas fa-location-arrow btn-action" onclick="openMap()"></i>
+    <i class="fas fa-copy btn-copy" onclick="copyField('inputAddress')"></i>
+  </div>
+</div>
+    </div>
+    
+    <div class="section-title">其他</div>
+    <div class="form-section">
+      <div class="input-group">
+        <label class="input-label">標籤</label>
+        <input type="text" id="inputTag" class="input-field" placeholder="選擇或輸入" list="tagOptions">
+        <datalist id="tagOptions"></datalist>
+      </div>
+      <div class="input-group" style="border:none;">
+          <label class="input-label">備註</label>
+          <input type="text" id="inputNote" class="input-field" placeholder="備註...">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="batchTagModal" class="modal modal-bottom-sheet">
+  <div class="modal-header" style="border-radius: 16px 16px 0 0; border-bottom: none;">
+    <button type="button" class="btn-text" onclick="closeModal('batchTagModal')">取消</button>
+    <div class="modal-title">批次設定</div>
+    <button type="button" class="btn-text primary" id="btnConfirmBatchTag" onclick="confirmBatchTag()">完成</button>
+  </div>
+  <div class="modal-body" style="padding: 20px;">
+    <div id="batchWarning" class="warning-box">
+      <i class="fas fa-exclamation-circle"></i>
+      <div>注意：所選資料中包含已設定標籤的項目。</div>
+    </div>
+    <div class="form-section">
+        <div class="input-group" style="border:none;">
+            <label class="input-label" style="width:60px;">標籤</label>
+            <input type="text" id="batchInputTag" class="input-field" placeholder="輸入標籤名稱" list="tagOptions">
+        </div>
+    </div>
+    <button type="button" class="btn-text danger" style="width: 100%; text-align: center; margin-top: 10px;" onclick="confirmBatchTag(true)">移除所選標籤</button>
+  </div>
+</div>
+
+<div id="renameModal" class="modal modal-alert">
+    <div class="alert-box">
+        <div class="alert-header">編輯標籤名稱</div>
+        <div class="alert-body">
+            <input type="text" id="renameInput" class="alert-input" placeholder="請輸入新名稱">
+        </div>
+        <div class="alert-footer">
+            <button type="button" class="alert-btn cancel" onclick="closeModal('renameModal')">取消</button>
+            <button type="button" class="alert-btn" onclick="confirmRename()">確定</button>
+        </div>
+    </div>
+</div>
+
+<div id="colorModal" class="modal modal-bottom-sheet">
+  <div class="modal-header" style="border-radius: 16px 16px 0 0; border-bottom: none;">
+    <button type="button" class="btn-text" onclick="closeModal('colorModal')">取消</button>
+    <div class="modal-title">選擇顏色</div>
+    <button type="button" class="btn-text primary" onclick="saveSelectedColor()">確定</button>
+  </div>
+  <div class="modal-body" style="padding: 24px;">
+    <div id="colorPreview" class="color-preview-box" style="background:var(--primary);">預覽顏色</div>
+    
+    <div class="color-grid">
+        <div class="color-circle" style="background:#FF3B30" onclick="selectColor('#FF3B30', this)"></div>
+        <div class="color-circle" style="background:#FF9500" onclick="selectColor('#FF9500', this)"></div>
+        <div class="color-circle" style="background:#FFCC00" onclick="selectColor('#FFCC00', this)"></div>
+        <div class="color-circle" style="background:#34C759" onclick="selectColor('#34C759', this)"></div>
+        <div class="color-circle" style="background:#007AFF" onclick="selectColor('#007AFF', this)"></div>
+        <div class="color-circle" style="background:#5856D6" onclick="selectColor('#5856D6', this)"></div>
+        <div class="color-circle" style="background:#AF52DE" onclick="selectColor('#AF52DE', this)"></div>
+        <div class="color-circle" style="background:#8E8E93" onclick="selectColor('#8E8E93', this)"></div>
+        <div class="color-circle" style="background:#000000" onclick="selectColor('#000000', this)"></div>
+        <div class="color-circle rainbow" style="position: relative;">
+  <i class="fas fa-plus"></i>
+  <input type="color" 
+         onchange="selectColor(this.value, this.parentNode)"
+         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0;">
+</div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<div id="loader" class="loader">
+  <div class="spinner"></div>
+  <p id="loadingText" style="margin-top:15px; color:var(--text-sec);">處理中...</p>
+</div>
+<div id="toast" class="toast">訊息</div>
+
+<script>
+  // 🔥 請將這裡換成您 GAS 部署後拿到的網址 (以 /exec 結尾)
   const GAS_URL = 'https://script.google.com/macros/s/AKfycby6XDg1Ts6iiqbpccamjGkTptN3NM_E6hXVZ64zsH3sKRZ7JJYw6f7sEzphESGAbQSL/exec';
+
+  /* -------------------------------------------------------------------------- */
+  /* 核心：API 呼叫函式 (用來取代 google.script.run)                           */
+  /* -------------------------------------------------------------------------- */
+  
+  // 通用 POST 請求
+  function callApi(action, params = {}) {
+    const payload = { action: action, ...params };
+    return fetch(GAS_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }).then(res => res.json());
+  }
+
+  // 通用 GET 請求 (讀取資料用)
+  function callGetApi(action) {
+    return fetch(`${GAS_URL}?action=${action}`).then(res => res.json());
+  }
+
+  /* -------------------------------------------------------------------------- */
+  /* 原本的全域變數與邏輯 (保留不變)                                            */
+  /* -------------------------------------------------------------------------- */
 
   let allContacts = [];
   let cropper = null;
@@ -29,53 +640,43 @@
   let lastTouchTime = 0;
   let tabPressTimer; 
   let selectedTabForAction = null;
-  let pendingColor = null;
+  let pendingColor = null; 
 
   const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png"; 
   const formPlaceholder = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
 
-  /* --- API 通用呼叫函式 (取代 google.script.run) --- */
-  function callApi(action, params = {}) {
-    // 組合要傳給後端的資料
-    const payload = { action: action, ...params };
-    
-    return fetch(GAS_URL, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    })
-    .then(res => res.json()); // 解析 JSON
-  }
-
-  // GET 請求專用 (用於讀取資料)
-  function callGetApi(action) {
-    return fetch(`${GAS_URL}?action=${action}`)
-      .then(res => res.json());
-  }
-
-  /* --- 主程式開始 --- */
-
   window.onload = function() {
-    if (typeof loadFromUrlHash === 'function') loadFromUrlHash();
+    if (typeof loadFromUrlHash === 'function') {
+      loadFromUrlHash();
+    }
     initTheme(); 
-    initLoad(); // 這裡會去呼叫 API
+    initLoad();
     initSwipeBack(); 
     
     var closeMenuHandler = function(e) {
       if (!e.target.closest('.context-menu')) {
         var menu = document.getElementById('tabContextMenu');
-        if (menu && menu.style.display !== 'none') menu.style.display = 'none';
+        if (menu && menu.style.display !== 'none') {
+          menu.style.display = 'none';
+        }
       }
     };
+
     document.addEventListener('mousedown', closeMenuHandler);
     document.addEventListener('touchstart', closeMenuHandler);
   };
   
   // Ghost Click Fix
   function startPress(e, rowIndex) {
-    if (e.type === 'touchstart') lastTouchTime = Date.now();
-    else if (e.type === 'mousedown') { if (Date.now() - lastTouchTime < 800) return; }
+    if (e.type === 'touchstart') {
+      lastTouchTime = Date.now();
+    } else if (e.type === 'mousedown') {
+      if (Date.now() - lastTouchTime < 800) return; 
+    }
     isLongPressTriggered = false;
-    pressTimer = setTimeout(() => { triggerSelection(rowIndex); }, 600);
+    pressTimer = setTimeout(() => {
+        triggerSelection(rowIndex);
+    }, 600);
   }
   function cancelPress() { clearTimeout(pressTimer); }
   function handleRightClick(rowIndex) { clearTimeout(pressTimer); triggerSelection(rowIndex); }
@@ -86,7 +687,8 @@
     if (!isSelectionMode) toggleSelectionMode(true);
     const strRow = rowIndex.toString();
     if (!selectedRows.has(strRow)) selectedRows.add(strRow);
-    updateBatchUI(); renderListHTML(); 
+    updateBatchUI();
+    renderListHTML(); 
   }
 
   function handleCardClick(jsonStr, rowIndex) {
@@ -114,6 +716,7 @@
     e.preventDefault();
     selectedTabForAction = tag;
     pendingColor = customTagColors[tag] || '#007AFF';
+    
     const menu = document.getElementById('tabContextMenu');
     let x = e.clientX || (e.touches && e.touches[0].clientX);
     let y = e.clientY || (e.touches && e.touches[0].clientY);
@@ -138,26 +741,27 @@
 
     if (newName && newName !== oldName) {
       showLoading('更新中...');
+      // 更新本地資料
       allContacts.forEach(c => { if(c.tag === oldName) c.tag = newName; });
       if(customTagColors[oldName]) {
         customTagColors[newName] = customTagColors[oldName];
         delete customTagColors[oldName];
         localStorage.setItem('tag_colors', JSON.stringify(customTagColors));
-        // [API] 同步更名後的顏色
+        // [API] 同步顏色設定
         callApi('saveCloudSettings', { settings: { tagColors: customTagColors } });
       }
-      
+
       // [API] 呼叫後端更名
       callApi('batchRenameTag', { oldTag: oldName, newTag: newName })
         .then(res => {
-            hideLoading();
-            if(res.status === 'success') {
-              renderTabs();
-              if(currentTab === oldName) switchTab(newName); else applyFilter();
-              showToast('更名成功');
-            } else alert(res.message);
+          hideLoading();
+          if(res.status === 'success') {
+            renderTabs();
+            if(currentTab === oldName) switchTab(newName); else applyFilter();
+            showToast('更名成功');
+          } else alert(res.message);
         })
-        .catch(err => { hideLoading(); alert('連線錯誤: ' + err); });
+        .catch(err => { hideLoading(); alert('錯誤: ' + err); });
     }
   }
 
@@ -169,7 +773,9 @@
     document.getElementById('colorModal').classList.add('active');
   }
 
-  function triggerCustomColor() { document.getElementById('hiddenColorInput').click(); }
+  function triggerCustomColor() {
+    document.getElementById('hiddenColorInput').click();
+  }
 
   function selectColor(color, element) {
     pendingColor = color;
@@ -190,16 +796,15 @@
     }
   }
 
-  // --- Core Functions (Load & Render) ---
+  // --- Core Functions ---
   function initLoad() {
     if(isSelectionMode) toggleSelectionMode(false);
     const icon = document.getElementById('refreshIcon');
     if(icon) icon.classList.add('fa-spin');
 
-    // [API] 1. 先讀取雲端設定 (使用 GET)
+    // [API] 1. 讀取設定 (GET)
     callGetApi('getCloudSettings')
       .then(settings => {
-        // 恢復設定
         if (settings.theme === 'dark') {
           document.documentElement.setAttribute('data-theme', 'dark');
           const tIcon = document.getElementById('themeIcon');
@@ -213,15 +818,17 @@
           customTagColors = settings.tagColors;
           localStorage.setItem('tag_colors', JSON.stringify(customTagColors));
         }
-        // [API] 2. 再讀取資料清單 (使用 GET)
+        // [API] 2. 讀取資料 (GET)
         return callGetApi('getContactList');
       })
       .then(res => {
-         renderList(res); // 渲染畫面
+         renderList(res);
       })
       .catch(err => {
          hideLoading();
-         alert('載入失敗，請檢查 GAS 部署權限是否為「所有人」。\n錯誤: ' + err);
+         console.error(err);
+         // 若失敗，alert 可能會一直跳，視情況保留
+         // alert('載入失敗');
       });
   }
 
@@ -433,18 +1040,23 @@
     const currentTheme = document.documentElement.getAttribute('data-theme');
     const icon = document.getElementById('themeIcon');
     let newTheme = 'light';
+
     if (currentTheme === 'dark') { 
       document.documentElement.removeAttribute('data-theme'); 
       newTheme = 'light';
-      icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); 
+      icon.classList.remove('fa-sun'); 
+      icon.classList.add('fa-moon'); 
     } else { 
       document.documentElement.setAttribute('data-theme', 'dark'); 
       newTheme = 'dark';
-      icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); 
+      icon.classList.remove('fa-moon'); 
+      icon.classList.add('fa-sun'); 
     }
+    
     localStorage.setItem('app_theme', newTheme);
     updateUrlHash(); 
-    // [API] 同步主題
+
+    // [API] 同步到雲端
     callApi('saveCloudSettings', { settings: { theme: newTheme } });
   }
 
@@ -470,7 +1082,6 @@
     let newTag = document.getElementById('batchInputTag').value;
     if (isDelete === true) { if (!confirm('確定要移除這些聯絡人的標籤嗎？')) return; newTag = ""; }
     else { if (document.getElementById('batchInputTag').disabled) return; if (!newTag) { showToast('請輸入標籤'); return; } }
-    
     closeModal('batchTagModal'); showLoading();
     const rows = Array.from(selectedRows);
     
@@ -513,7 +1124,7 @@
     modalBody.classList.add('scanning');
     setTimeout(() => { modalBody.classList.remove('scanning'); img.style.opacity = '1'; toolbar.classList.add('show'); cropper = new Cropper(img, { viewMode: 1, dragMode: 'move', autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }, 1200);
   }
-
+  
   function confirmCrop() { 
     if (!cropper) return; 
     showLoading('AI 辨識中...'); 
@@ -533,7 +1144,7 @@
             alert('分析失敗: ' + res.message); 
         }
       })
-      .catch(err => { hideLoading(); alert('連線錯誤: ' + err); });
+      .catch(err => { hideLoading(); alert('錯誤: ' + err); });
   }
 
   function handleLocalImage(input) { if (input.files && input.files[0]) { const file = input.files[0]; const img = document.createElement('img'); const url = URL.createObjectURL(file); img.onload = function() { const MAX_WIDTH = 800; let width = img.width; let height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); document.getElementById('previewImg').src = compressedDataUrl; document.getElementById('imgUrlHidden').value = compressedDataUrl; URL.revokeObjectURL(url); }; img.src = url; } }
@@ -550,7 +1161,7 @@
     if (!formData.name) { showToast('請輸入姓名'); return; } 
     showLoading();
     
-    // [API] 判斷是新增還是更新
+    // [API] 新增或更新
     const action = formData.rowIndex ? 'updateContactInSheet' : 'saveContactToSheet';
     
     callApi(action, { formData: formData })
@@ -621,7 +1232,6 @@
       }
     } catch (e) { console.log('Error loading hash:', e); }
   }
-</script>
 </script>
 
 </body>
