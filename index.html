@@ -1,12 +1,23 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-TW" data-theme="dark">
 <head>
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>Meishi Box </title>
-  <link rel="apple-touch-icon" href="https://drive.google.com/file/d/13z7L7V-nGkUhyMNnjv2A6qcRWGaozMW-/view?usp=sharing">
+  <title>Meishi Box</title>
+  
+  <script>
+    (function() {
+      var saved = localStorage.getItem('app_theme');
+      if (saved === 'light') {
+        document.documentElement.removeAttribute('data-theme');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    })();
+  </script>
 
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/847/847969.png">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
@@ -15,22 +26,24 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
   
   <style>
+    /* [防止白屏閃爍] CSS 配合 JS */
+    html { background-color: #000000; }
+    html:not([data-theme="dark"]) { background-color: #F2F2F7; }
+
     /* --- CSS 變數 --- */
-    :root { 
-      --primary: #007AFF; 
-      --bg: #F2F2F7;      
-      --card: #FFFFFF; 
-      --text: #000000; 
+    :root {
+      --primary: #007AFF;
+      --bg: #F2F2F7;
+      --card: #FFFFFF;
+      --text: #000000;
       --text-sec: #8E8E93;
-      --danger: #FF3B30;  
+      --danger: #FF3B30;
       --separator: rgba(60, 60, 67, 0.2); 
       --input-bg: rgba(118, 118, 128, 0.12);
-      --glass-bg: rgba(255, 255, 255, 0.85); /* 液態玻璃透明度 */
+      --glass-bg: rgba(255, 255, 255, 0.85);
       --tab-bg: #E5E5EA;
       --tab-active-bg: #FFFFFF;
       --tab-active-text: #000000;
-      --skeleton-base: #F2F2F7;
-      --skeleton-highlight: #E5E5EA;
     }
 
     [data-theme="dark"] {
@@ -46,8 +59,6 @@
       --tab-bg: #2C2C2E;
       --tab-active-bg: #636366;
       --tab-active-text: #FFFFFF;
-      --skeleton-base: #1C1C1E;
-      --skeleton-highlight: #2C2C2E;
     }
     
     body { 
@@ -60,7 +71,7 @@
     }
     input, textarea { -webkit-user-select: text; user-select: text; }
 
-    /* Header (液態玻璃) */
+    /* Header */
     .sticky-header {
       position: sticky; top: 0; z-index: 100;
       background: var(--glass-bg); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -68,17 +79,15 @@
     }
     .app-header { background: transparent; padding: 10px 16px 6px 16px; display: flex; align-items: center; justify-content: space-between; }
     .app-title { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; } 
-    
     .sort-select { border: none; background: var(--input-bg); padding: 6px 12px; border-radius: 14px; font-size: 13px; color: var(--primary); font-weight: 600; outline: none; margin-left: 8px; }
     
-    /* Search Bar */
+    /* Search & Tabs */
     .search-bar { padding: 0 16px 10px 16px; background: transparent; }
     .search-input-wrap { background: var(--input-bg); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; }
     .search-input-wrap i { color: var(--text-sec); font-size: 14px; }
     .search-input-wrap input { border: none; background: transparent; flex: 1; margin-left: 6px; font-size: 17px; outline: none; color: var(--text); }
     .clear-btn { display: none; color: var(--text-sec); font-size: 16px; cursor: pointer; padding: 4px; margin-left: 8px; }
 
-    /* Tab Bar */
     .tab-bar { display: flex; overflow-x: auto; white-space: nowrap; padding: 4px 16px 8px 16px; gap: 8px; scrollbar-width: none; }
     .tab-bar::-webkit-scrollbar { display: none; }
     .tab-item { display: inline-block; padding: 7px 16px; border-radius: 18px; font-size: 15px; color: var(--text-sec); font-weight: 600; background: transparent; cursor: pointer; transition: all 0.2s; -webkit-touch-callout: none; }
@@ -165,7 +174,6 @@
       min-height: 44px; box-sizing: border-box; width: 100%; 
     }
     
-    /* [修改] 強制按鈕為文字，解決 icon 消失問題 */
     .btn-text { background: none; border: none; font-size: 17px; color: var(--primary); cursor: pointer; padding: 4px 8px; font-weight: 400; }
     .btn-text.primary { font-weight: 600; }
     .btn-text.danger { color: var(--danger); }
@@ -176,16 +184,16 @@
     .modal-body { flex: 1; overflow-y: auto; padding: 20px 16px; }
     .modal-bottom-sheet { top: auto; bottom: 0; height: auto; border-radius: 16px 16px 0 0; background: var(--card); box-shadow: 0 -4px 30px rgba(0,0,0,0.15); }
 
-    /* [修改] Alert Style Modal (置中) */
+    /* Alert Style Modal */
     .modal-alert {
         background: rgba(0,0,0,0.6); backdrop-filter: blur(2px);
         align-items: center; justify-content: center; padding: 20px;
         opacity: 0; pointer-events: none; transition: opacity 0.3s;
-        transform: none !important; /* 覆蓋 slide */
+        transform: none !important; 
     }
     .modal-alert.active { opacity: 1; pointer-events: auto; }
     .alert-box {
-        background: #2C2C2E; /* 深色背景，模擬截圖 */
+        background: #2C2C2E; 
         width: 100%; max-width: 300px;
         border-radius: 14px; overflow: hidden; 
         box-shadow: 0 10px 30px rgba(0,0,0,0.4);
@@ -208,7 +216,7 @@
     .alert-btn:active { background: rgba(255,255,255,0.1); }
     .alert-btn.cancel { font-weight: 400; border-right: 0.5px solid rgba(255,255,255,0.15); color: #98989D; }
 
-    /* [修改] Color Picker Grid (美觀版) */
+    /* Color Picker Grid */
     .color-grid {
         display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; justify-items: center; padding: 10px 0;
     }
@@ -219,7 +227,6 @@
     .color-circle.selected { transform: scale(1.1); border-color: var(--text); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--primary); }
     .color-circle:active { transform: scale(0.9); }
     
-    /* 自訂彩虹按鈕 */
     .color-circle.rainbow {
         background: linear-gradient(135deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff);
         display: flex; align-items: center; justify-content: center;
@@ -235,7 +242,7 @@
         transition: background 0.3s;
     }
 
-    /* [修改] 圖片顯示優化 */
+    /* Img Upload */
     .img-upload-area { margin-bottom: 20px; text-align: center; }
     .img-upload-area img { 
         width: 100%; height: auto; object-fit: cover; 
@@ -245,74 +252,29 @@
     }
 
     .form-section { background: var(--card); border-radius: 10px; padding: 0 16px; margin-bottom: 24px; overflow: hidden; }
-/* 2. 整行容器：確保垂直置中 */
-.input-group {
-  display: flex;
-  align-items: center;        /* 垂直置中 */
-  border-bottom: 0.5px solid var(--separator); /* 維持原本底線 */
-  padding: 12px 0;
-  position: relative;
-}    .input-group:last-child { border-bottom: none; }
+    .input-group {
+      display: flex; align-items: center; border-bottom: 0.5px solid var(--separator); padding: 12px 0; position: relative;
+    }
+    .input-group:last-child { border-bottom: none; }
     .section-title { font-size: 13px; color: var(--text-sec); margin-bottom: 8px; margin-left: 16px; text-transform: uppercase; }
     .input-label { width: 80px; font-size: 16px; color: var(--text); flex-shrink: 0; }
-/* 1. 輸入框設定：強制透明，移除所有邊框與陰影，恢復原本質感 */
-.input-field {
-  flex: 1;                    /* 讓輸入框佔滿剩餘空間 */
-  min-width: 0;               /* 防止內容過長時撐開版面 */
-  background: transparent !important; /* 關鍵：移除白色背景 */
-  border: none !important;    /* 關鍵：移除邊框 */
-  box-shadow: none !important;/* 移除陰影 */
-  font-size: 16px;
-  color: var(--primary);      /* 字體維持原本設定 */
-  padding: 4px 8px;           /*稍微留點呼吸空間*/
-  outline: none;              /*移除點擊時的黑框*/
-}    .action-icon { color: var(--primary); font-size: 20px; margin-left: 12px; cursor: pointer; padding: 8px; }
-    /* 3. 右側按鈕區：專門用來包住那些 icon */
-.action-box {
-  display: flex;
-  align-items: center;
-  margin-left: auto;          /* 關鍵：自動推到最右邊 */
-  padding-left: 8px;
-  gap: 16px;                  /* 兩個 icon 之間的距離，設寬一點才好看 */
-  flex-shrink: 0;             /* 禁止被擠壓 */
-}
+    
+    .input-field {
+      flex: 1; min-width: 0; background: transparent !important; border: none !important; box-shadow: none !important;
+      font-size: 16px; color: var(--primary); padding: 4px 8px; outline: none;
+    }
+    
+    .action-box {
+      display: flex; align-items: center; margin-left: auto; padding-left: 8px; gap: 16px; flex-shrink: 0;
+    }
 
-/* --- [修改] 統一按鈕樣式 (全部變暗) --- */
+    .btn-action, .btn-copy {
+      font-size: 20px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; transition: opacity 0.2s;
+      color: var(--primary); opacity: 0.6;
+    }
+    .btn-action:hover, .btn-action:active,
+    .btn-copy:hover, .btn-copy:active { opacity: 1; }
 
-/* 1. 定義所有右側按鈕的基礎樣式 */
-.btn-action, .btn-copy {
-  font-size: 20px;
-  padding: 4px 8px;           /* 增加觸控範圍 */
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  transition: opacity 0.2s;
-  
-  /* [關鍵修改] 統一顏色與透明度 */
-  color: var(--primary);      /* 維持藍色系 */
-  opacity: 0.6;               /* 預設全部變暗 (半透明) */
-}
-
-/* 2. 當滑鼠移過去或手指按下去時，一起變亮 */
-.btn-action:hover, .btn-action:active,
-.btn-copy:hover, .btn-copy:active {
-  opacity: 1;                 /* 變回全亮 */
-}
-
-
-/* 主要功能 (電話/地圖) - 亮藍色 */
-.btn-action {
-  color: var(--primary);
-}
-
-/* 複製功能 - 稍微透明一點，做出層次感 */
-.btn-copy {
-  color: var(--primary);
-  opacity: 0.6;               /* 設為 0.6 讓它不要跟主要按鈕搶戲 */
-}
-.btn-copy:hover, .btn-copy:active {
-  opacity: 1;                 /* 點擊時變亮 */
-}
     .warning-box { background: rgba(255, 59, 48, 0.1); color: var(--danger); padding: 12px 16px; border-radius: 10px; font-size: 14px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
     .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-20px); background: var(--glass-bg); backdrop-filter: blur(10px); color: var(--text); padding: 12px 24px; border-radius: 30px; font-weight: 500; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 300; }
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
@@ -420,7 +382,6 @@
   </div>
 </div>
 
-
 <div id="detailModal" class="modal">
   <div class="modal-header">
     <button type="button" class="btn-text cancel" onclick="closeModal('detailModal')">取消</button>
@@ -431,12 +392,9 @@
     </div>
   </div>
   <div class="modal-body">
-            <div class="img-upload-area">
-            <img id="previewImg" src="" style="width: 100%; height: auto; max-height: 300px; object-fit: contain; background: var(--tab-bg); border-radius: 12px; display:block; margin: 0 auto 12px auto;">
-
+    <div class="img-upload-area">
+      <img id="previewImg" src="" style="width: 100%; height: auto; max-height: 300px; object-fit: contain; background: var(--tab-bg); border-radius: 12px; display:block; margin: 0 auto 12px auto;">
       <div class="img-controls">
-
-
         <button type="button" class="btn-sm" onclick="triggerLocalUpload()">更換照片</button>
         <button type="button" class="btn-sm btn-del-img" onclick="removePreviewImage()">移除</button>
       </div>
@@ -444,58 +402,53 @@
     <input type="file" id="localImgInput" accept="image/*" style="display:none" onchange="handleLocalImage(this)">
     <input type="hidden" id="rowIndex"><input type="hidden" id="imgUrlHidden">
 
-<div class="section-title">基本資料</div>
+    <div class="section-title">基本資料</div>
     <div class="form-section">
       <div class="input-group">
         <label class="input-label">姓名</label>
         <input type="text" id="inputName" class="input-field" placeholder="必填">
-<div class="action-box">
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
-  </div>      </div>
+        <div class="action-box"><i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i></div>
+      </div>
       <div class="input-group">
         <label class="input-label">職稱</label>
         <input type="text" id="inputTitle" class="input-field" placeholder="職稱">
-<div class="action-box">
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
-  </div>      </div>
+        <div class="action-box"><i class="fas fa-copy btn-copy" onclick="copyField('inputTitle')"></i></div>
+      </div>
       <div class="input-group">
         <label class="input-label">公司</label>
         <input type="text" id="inputCompany" class="input-field" placeholder="公司名稱">
-<div class="action-box">
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
-  </div>      </div>
+        <div class="action-box"><i class="fas fa-copy btn-copy" onclick="copyField('inputCompany')"></i></div>
+      </div>
     </div>
 
     <div class="section-title">聯絡方式</div>
     <div class="form-section">
-<div class="input-group">
-  <label class="input-label">手機</label>
-  <input type="text" id="inputPhone" class="input-field" placeholder="手機號碼">
-  <div class="action-box">
-    <i class="fas fa-mobile-alt btn-action" onclick="makeCall('inputPhone')"></i>
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputPhone')"></i>
-  </div>
-</div>
-<div class="input-group">
-  <label class="input-label">電話</label>
-  <input type="text" id="inputTelCompany" class="input-field" placeholder="公司電話">
-  <div class="action-box">
-    <i class="fas fa-tty btn-action" onclick="makeCall('inputTelCompany')"></i>
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputTelCompany')"></i>
-  </div>
-</div>
+      <div class="input-group">
+        <label class="input-label">手機</label>
+        <input type="text" id="inputPhone" class="input-field" placeholder="手機號碼">
+        <div class="action-box">
+          <i class="fas fa-mobile-alt btn-action" onclick="makeCall('inputPhone')"></i>
+          <i class="fas fa-copy btn-copy" onclick="copyField('inputPhone')"></i>
+        </div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">電話</label>
+        <input type="text" id="inputTelCompany" class="input-field" placeholder="公司電話">
+        <div class="action-box">
+          <i class="fas fa-tty btn-action" onclick="makeCall('inputTelCompany')"></i>
+          <i class="fas fa-copy btn-copy" onclick="copyField('inputTelCompany')"></i>
+        </div>
+      </div>
       <div class="input-group">
         <label class="input-label">信箱</label>
         <input type="email" id="inputEmail" class="input-field" placeholder="電子信箱">
-<div class="action-box">
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
-  </div>      </div>
+        <div class="action-box"><i class="fas fa-copy btn-copy" onclick="copyField('inputEmail')"></i></div>
+      </div>
       <div class="input-group">
         <label class="input-label">網址</label>
         <input type="text" id="inputWebsite" class="input-field" placeholder="網站">
-<div class="action-box">
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
-  </div>      </div>
+        <div class="action-box"><i class="fas fa-copy btn-copy" onclick="copyField('inputWebsite')"></i></div>
+      </div>
     </div>
     
     <div class="section-title">公司資料</div>
@@ -503,17 +456,16 @@
       <div class="input-group">
         <label class="input-label">統編</label>
         <input type="text" id="inputTaxId" class="input-field" placeholder="統一編號">
-<div class="action-box">
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputName')"></i>
-  </div>      </div>
-<div class="input-group">
-  <label class="input-label">地址</label>
-  <input type="text" id="inputAddress" class="input-field" placeholder="地址">
-  <div class="action-box">
-    <i class="fas fa-location-arrow btn-action" onclick="openMap()"></i>
-    <i class="fas fa-copy btn-copy" onclick="copyField('inputAddress')"></i>
-  </div>
-</div>
+        <div class="action-box"><i class="fas fa-copy btn-copy" onclick="copyField('inputTaxId')"></i></div>
+      </div>
+      <div class="input-group">
+        <label class="input-label">地址</label>
+        <input type="text" id="inputAddress" class="input-field" placeholder="地址">
+        <div class="action-box">
+          <i class="fas fa-location-arrow btn-action" onclick="openMap()"></i>
+          <i class="fas fa-copy btn-copy" onclick="copyField('inputAddress')"></i>
+        </div>
+      </div>
     </div>
     
     <div class="section-title">其他</div>
@@ -573,7 +525,6 @@
   </div>
   <div class="modal-body" style="padding: 24px;">
     <div id="colorPreview" class="color-preview-box" style="background:var(--primary);">預覽顏色</div>
-    
     <div class="color-grid">
         <div class="color-circle" style="background:#FF3B30" onclick="selectColor('#FF3B30', this)"></div>
         <div class="color-circle" style="background:#FF9500" onclick="selectColor('#FF9500', this)"></div>
@@ -585,17 +536,12 @@
         <div class="color-circle" style="background:#8E8E93" onclick="selectColor('#8E8E93', this)"></div>
         <div class="color-circle" style="background:#000000" onclick="selectColor('#000000', this)"></div>
         <div class="color-circle rainbow" style="position: relative;">
-  <i class="fas fa-plus"></i>
-  <input type="color" 
-         onchange="selectColor(this.value, this.parentNode)"
-         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0;">
-</div>
+          <i class="fas fa-plus"></i>
+          <input type="color" onchange="selectColor(this.value, this.parentNode)" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0;">
+        </div>
     </div>
   </div>
 </div>
-
-
-
 
 <div id="loader" class="loader">
   <div class="spinner"></div>
@@ -604,30 +550,32 @@
 <div id="toast" class="toast">訊息</div>
 
 <script>
-  // 🔥 請將這裡換成您 GAS 部署後拿到的網址 (以 /exec 結尾)
-  const GAS_URL = 'https://script.google.com/macros/s/AKfycbw19CD9SPa1wOAC6xCuSNU65QKPUZK1SzPB5Y9tmpNbHfIivHvLCHf8gIObNqa3Kukrhw/exec';
+  // 【請在這裡貼上您的 Google Apps Script 部署網址】
+  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw0p_1Se_LgAO3hpgB_LKE6D9FWAGuXRE3p4DJe5sMHbu8U5DemIu-cM1H3ax9OOk0wHg/exec"; 
 
-  /* -------------------------------------------------------------------------- */
-  /* 核心：API 呼叫函式 (用來取代 google.script.run)                           */
-  /* -------------------------------------------------------------------------- */
-  
-  // 通用 POST 請求
-  function callApi(action, params = {}) {
-    const payload = { action: action, ...params };
-    return fetch(GAS_URL, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }).then(res => res.json());
+  // --- API 呼叫包裝函式 (GitHub 專用) ---
+  async function callBackend(action, data = {}) {
+    try {
+        const payload = JSON.stringify({ 
+            action: action, 
+            appSecret: "MeishiBox_2024_Secret", // 必須跟後端 Code.gs 設定的密碼一樣
+            ...data 
+        });
+
+        // 使用 text/plain 避開 CORS 錯誤
+        const response = await fetch(SCRIPT_URL, {
+            method: "POST",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: payload
+        });
+
+        const result = await response.json();
+        return result;
+    } catch (e) {
+        console.error("API Call Failed:", e);
+        return { status: 'error', message: '連線失敗: ' + e.toString() };
+    }
   }
-
-  // 通用 GET 請求 (讀取資料用)
-  function callGetApi(action) {
-    return fetch(`${GAS_URL}?action=${action}`).then(res => res.json());
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /* 原本的全域變數與邏輯 (保留不變)                                            */
-  /* -------------------------------------------------------------------------- */
 
   let allContacts = [];
   let cropper = null;
@@ -641,7 +589,7 @@
   let lastTouchTime = 0;
   let tabPressTimer; 
   let selectedTabForAction = null;
-  let pendingColor = null; 
+  let pendingColor = null;
 
   const defaultAvatar = "https://cdn-icons-png.flaticon.com/512/847/847969.png"; 
   const formPlaceholder = "https://cdn-icons-png.flaticon.com/512/847/847969.png";
@@ -650,7 +598,7 @@
     if (typeof loadFromUrlHash === 'function') {
       loadFromUrlHash();
     }
-    initTheme(); 
+    // initTheme 已由 head script 取代
     initLoad();
     initSwipeBack(); 
     
@@ -662,12 +610,10 @@
         }
       }
     };
-
     document.addEventListener('mousedown', closeMenuHandler);
     document.addEventListener('touchstart', closeMenuHandler);
   };
   
-  // Ghost Click Fix
   function startPress(e, rowIndex) {
     if (e.type === 'touchstart') {
       lastTouchTime = Date.now();
@@ -727,7 +673,6 @@
     menu.style.display = 'flex';
   }
 
-  // Rename Logic
   function openRenameModal() {
     document.getElementById('tabContextMenu').style.display = 'none';
     document.getElementById('renameInput').value = selectedTabForAction;
@@ -742,40 +687,35 @@
 
     if (newName && newName !== oldName) {
       showLoading('更新中...');
-      // 更新本地資料
       allContacts.forEach(c => { if(c.tag === oldName) c.tag = newName; });
+      
+      // 先處理顏色同步 (如果有的話)
       if(customTagColors[oldName]) {
         customTagColors[newName] = customTagColors[oldName];
         delete customTagColors[oldName];
         localStorage.setItem('tag_colors', JSON.stringify(customTagColors));
-        // [API] 同步顏色設定
-        callApi('saveCloudSettings', { settings: { tagColors: customTagColors } });
+        callBackend('saveCloudSettings', { settings: { tagColors: customTagColors } });
       }
 
-      // [API] 呼叫後端更名
-      callApi('batchRenameTag', { oldTag: oldName, newTag: newName })
-        .then(res => {
-          hideLoading();
-          if(res.status === 'success') {
-            renderTabs();
-            if(currentTab === oldName) switchTab(newName); else applyFilter();
-            showToast('更名成功');
-          } else alert(res.message);
-        })
-        .catch(err => { hideLoading(); alert('錯誤: ' + err); });
+      // 再處理後端改名
+      callBackend('batchRenameTag', { oldTag: oldName, newTag: newName }).then(res => {
+        hideLoading();
+        if(res.status === 'success') {
+          renderTabs();
+          if(currentTab === oldName) switchTab(newName); else applyFilter();
+          showToast('更名成功');
+        } else {
+          alert(res.message);
+        }
+      });
     }
   }
 
-  // Color Picker Logic
   function openColorModal() {
     document.getElementById('tabContextMenu').style.display = 'none';
     document.getElementById('colorPreview').style.background = pendingColor;
     document.querySelectorAll('.color-circle').forEach(el => el.classList.remove('selected'));
     document.getElementById('colorModal').classList.add('active');
-  }
-
-  function triggerCustomColor() {
-    document.getElementById('hiddenColorInput').click();
   }
 
   function selectColor(color, element) {
@@ -792,8 +732,7 @@
       applyFilter(); 
       showToast('顏色已更新');
       closeModal('colorModal');
-      // [API] 同步顏色到雲端
-      callApi('saveCloudSettings', { settings: { tagColors: customTagColors } });
+      callBackend('saveCloudSettings', { settings: { tagColors: customTagColors } });
     }
   }
 
@@ -803,38 +742,33 @@
     const icon = document.getElementById('refreshIcon');
     if(icon) icon.classList.add('fa-spin');
 
-    // [API] 1. 讀取設定 (GET)
-    callGetApi('getCloudSettings')
-      .then(settings => {
-        if (settings.theme === 'dark') {
-          document.documentElement.setAttribute('data-theme', 'dark');
-          const tIcon = document.getElementById('themeIcon');
-          if(tIcon) { tIcon.classList.remove('fa-moon'); tIcon.classList.add('fa-sun'); }
-        }
-        if (settings.tabOrder && settings.tabOrder.length > 0) {
-          savedTabOrder = settings.tabOrder;
-          localStorage.setItem('tabOrder_v1', JSON.stringify(savedTabOrder));
-        }
-        if (settings.tagColors) {
-          customTagColors = settings.tagColors;
-          localStorage.setItem('tag_colors', JSON.stringify(customTagColors));
-        }
-        // [API] 2. 讀取資料 (GET)
-        return callGetApi('getContactList');
-      })
-      .then(res => {
-         renderList(res);
-      })
-      .catch(err => {
-         hideLoading();
-         console.error(err);
-         // 若失敗，alert 可能會一直跳，視情況保留
-         // alert('載入失敗');
-      });
+    // 1. 取得設定
+    callBackend('getCloudSettings').then(settings => {
+      if (settings && settings.theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        const tIcon = document.getElementById('themeIcon');
+        if(tIcon) { tIcon.classList.remove('fa-moon'); tIcon.classList.add('fa-sun'); }
+      }
+      if (settings && settings.tabOrder && settings.tabOrder.length > 0) {
+        savedTabOrder = settings.tabOrder;
+        localStorage.setItem('tabOrder_v1', JSON.stringify(savedTabOrder));
+      }
+      if (settings && settings.tagColors) {
+        customTagColors = settings.tagColors;
+        localStorage.setItem('tag_colors', JSON.stringify(customTagColors));
+      }
+      
+      // 2. 取得聯絡人
+      return callBackend('getContactList');
+    }).then(renderList);
   }
 
   function renderList(res) {
-    if(res.status !== 'success') { hideLoading(); alert(res.message); return; }
+    if(!res || res.status !== 'success') { 
+        hideLoading(); 
+        if(res && res.message) alert(res.message);
+        return; 
+    }
     allContacts = res.data;
     renderTabs(); 
     applyFilter();
@@ -965,8 +899,7 @@
         localStorage.setItem('tabOrder_v1', JSON.stringify(newOrder));
         savedTabOrder = newOrder;
         updateUrlHash();
-        // [API] 同步頁籤順序
-        callApi('saveCloudSettings', { settings: { tabOrder: newOrder } });
+        callBackend('saveCloudSettings', { settings: { tabOrder: newOrder } });
       }
     });
   }
@@ -1019,8 +952,9 @@
 
   function copyField(inputId) {
     var val = document.getElementById(inputId).value;
-    if (val) navigator.clipboard.writeText(val).then(() => showToast('已複製')).catch(() => showToast('複製失敗'));
-    else showToast('無內容');
+    if (val) {
+      navigator.clipboard.writeText(val).then(function() { showToast('已複製'); }).catch(function() { showToast('複製失敗'); });
+    } else { showToast('無內容'); }
   }
 
   function toggleSearchClear() {
@@ -1028,14 +962,6 @@
     document.getElementById('searchClearBtn').style.display = val.length > 0 ? 'block' : 'none';
   }
   function clearSearch() { document.getElementById('searchInput').value = ''; toggleSearchClear(); applyFilter(); }
-
-  // Theme, Loading, Toast
-  function initTheme() {
-    const savedTheme = localStorage.getItem('app_theme');
-    const icon = document.getElementById('themeIcon');
-    if (savedTheme === 'dark') { document.documentElement.setAttribute('data-theme', 'dark'); icon.classList.remove('fa-moon'); icon.classList.add('fa-sun'); }
-    else { document.documentElement.removeAttribute('data-theme'); icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); }
-  }
 
   function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme');
@@ -1056,16 +982,13 @@
     
     localStorage.setItem('app_theme', newTheme);
     updateUrlHash(); 
-
-    // [API] 同步到雲端
-    callApi('saveCloudSettings', { settings: { theme: newTheme } });
+    callBackend('saveCloudSettings', { settings: { theme: newTheme } });
   }
 
   function showLoading(txt) { document.getElementById('loadingText').innerText = txt || '處理中...'; document.getElementById('loader').style.display = 'flex'; }
   function hideLoading() { document.getElementById('loader').style.display = 'none'; const icon = document.getElementById('refreshIcon'); if(icon) icon.classList.remove('fa-spin'); }
   function showToast(msg) { const el = document.getElementById('toast'); el.innerText = msg; el.classList.add('show'); setTimeout(() => { el.classList.remove('show'); }, 2000); }
 
-  // Modals & Forms
   function openBatchTagModal() {
     if(selectedRows.size === 0) { showToast('請先選取資料'); return; }
     const inputTag = document.getElementById('batchInputTag');
@@ -1086,13 +1009,10 @@
     closeModal('batchTagModal'); showLoading();
     const rows = Array.from(selectedRows);
     
-    // [API] 批次更新
-    callApi('batchUpdateTags', { rowIndices: rows, newTag: newTag })
-      .then(res => {
-        hideLoading();
-        if(res.status === 'success') { showToast(res.message); toggleSelectionMode(false); initLoad(); } else { alert(res.message); }
-      })
-      .catch(err => { hideLoading(); alert('錯誤: ' + err); });
+    callBackend('batchUpdateTags', { rowIndices: rows, newTag: newTag }).then(res => {
+      hideLoading();
+      if(res.status === 'success') { showToast(res.message); toggleSelectionMode(false); initLoad(); } else { alert(res.message); }
+    });
   }
 
   function executeBatchDelete() {
@@ -1100,13 +1020,10 @@
     if(!confirm(`確定要刪除這 ${selectedRows.size} 筆資料嗎？`)) return;
     showLoading(); const rows = Array.from(selectedRows);
     
-    // [API] 批次刪除
-    callApi('batchDeleteContacts', { rowIndices: rows })
-      .then(res => {
-        hideLoading();
-        if(res.status === 'success') { showToast(res.message); toggleSelectionMode(false); initLoad(); } else { alert(res.message); }
-      })
-      .catch(err => { hideLoading(); alert('錯誤: ' + err); });
+    callBackend('batchDeleteContacts', { rowIndices: rows }).then(res => {
+      hideLoading();
+      if(res.status === 'success') { showToast(res.message); toggleSelectionMode(false); initLoad(); } else { alert(res.message); }
+    });
   }
 
   function openManualAdd() { toggleFab(); openDetailModal({}, '', formPlaceholder); }
@@ -1128,24 +1045,22 @@
   
   function confirmCrop() { 
     if (!cropper) return; 
-    showLoading('AI 辨識中...'); 
+    showLoading(); 
     const croppedCanvas = cropper.getCroppedCanvas({ width: 800 }); 
     const base64Data = croppedCanvas.toDataURL('image/jpeg').split(',')[1]; 
     closeModal('cropModal'); 
     document.getElementById('cropToolbar').classList.remove('show'); 
     document.getElementById('cropImage').style.opacity = '0'; 
     
-    // [API] 名片辨識
-    callApi('processBusinessCard', { base64Data: base64Data, fileName: 'cropped_card.jpg' })
-      .then(res => {
-        hideLoading();
+    callBackend('processBusinessCard', { base64Data: base64Data, fileName: 'cropped_card.jpg' }).then(res => {
         if(res.status === 'success') { 
             openDetailModal(res.data, res.imageUrl, croppedCanvas.toDataURL('image/jpeg')); 
+            hideLoading(); 
         } else { 
+            hideLoading(); 
             alert('分析失敗: ' + res.message); 
-        }
-      })
-      .catch(err => { hideLoading(); alert('錯誤: ' + err); });
+        } 
+    });
   }
 
   function handleLocalImage(input) { if (input.files && input.files[0]) { const file = input.files[0]; const img = document.createElement('img'); const url = URL.createObjectURL(file); img.onload = function() { const MAX_WIDTH = 800; let width = img.width; let height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7); document.getElementById('previewImg').src = compressedDataUrl; document.getElementById('imgUrlHidden').value = compressedDataUrl; URL.revokeObjectURL(url); }; img.src = url; } }
@@ -1162,34 +1077,42 @@
     if (!formData.name) { showToast('請輸入姓名'); return; } 
     showLoading();
     
-    // [API] 新增或更新
-    const action = formData.rowIndex ? 'updateContactInSheet' : 'saveContactToSheet';
-    
-    callApi(action, { formData: formData })
-      .then(res => {
-        hideLoading();
+    // 區分新增或編輯
+    const actionName = formData.rowIndex ? 'updateContactInSheet' : 'saveContactToSheet';
+    callBackend(actionName, { formData: formData }).then(res => {
+        hideLoading(); 
         if(res.status === 'success') { 
             showToast(res.message); 
             closeModal('detailModal'); 
             initLoad(); 
         } else { 
             alert(res.message); 
-        }
-      })
-      .catch(err => { hideLoading(); alert('儲存失敗: ' + err); });
+        } 
+    });
   }
-
+  
   function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       var tabMenu = document.getElementById('tabContextMenu');
-      if (tabMenu && tabMenu.style.display !== 'none') { tabMenu.style.display = 'none'; return; }
-      if (document.getElementById('cropModal').classList.contains('active')) closeModal('cropModal');
-      else if (document.getElementById('detailModal').classList.contains('active')) closeModal('detailModal');
-      else if (document.getElementById('batchTagModal').classList.contains('active')) closeModal('batchTagModal');
-      else if (document.getElementById('renameModal').classList.contains('active')) closeModal('renameModal');
-      else if (document.getElementById('colorModal').classList.contains('active')) closeModal('colorModal');
-      else if (isSelectionMode) toggleSelectionMode(false);
+      if (tabMenu && tabMenu.style.display !== 'none') {
+        tabMenu.style.display = 'none';
+        return;
+      }
+      if (document.getElementById('cropModal').classList.contains('active')) { closeModal('cropModal'); return; }
+      if (document.getElementById('detailModal').classList.contains('active')) { closeModal('detailModal'); return; }
+      if (document.getElementById('batchTagModal').classList.contains('active')) { closeModal('batchTagModal'); return; }
+      if (document.getElementById('renameModal').classList.contains('active')) { closeModal('renameModal'); return; }
+      if (document.getElementById('colorModal').classList.contains('active')) { closeModal('colorModal'); return; }
+
+      var searchInput = document.getElementById('searchInput');
+      if (searchInput && searchInput.value !== '') {
+        clearSearch(); 
+        searchInput.blur();
+        return;
+      }
+      if (isSelectionMode) toggleSelectionMode(false);
     }
   });
 
@@ -1203,16 +1126,21 @@
     modal.addEventListener('touchmove', (e) => { if (!isSwiping) return; const diffX = e.touches[0].clientX - startX; if (diffX > 0) { modal.style.transition = 'none'; modal.style.transform = `translateX(${diffX}px)`; } }, {passive: true});
     modal.addEventListener('touchend', (e) => { if (!isSwiping) return; isSwiping = false; const diffX = e.changedTouches[0].clientX - startX; modal.style.transition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)'; if (diffX > 100) { modal.style.transform = 'translateX(100%)'; setTimeout(() => { closeModal('detailModal'); modal.style.transform = ''; }, 300); } else { modal.style.transform = ''; } });
   }
-  
+
   function updateUrlHash() {
     var currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
     var tabString = '';
-    if (typeof savedTabOrder !== 'undefined' && Array.isArray(savedTabOrder)) tabString = savedTabOrder.join(',');
+    if (typeof savedTabOrder !== 'undefined' && Array.isArray(savedTabOrder)) {
+      tabString = savedTabOrder.join(',');
+    }
     var hashParts = [];
     if (currentTheme === 'dark') hashParts.push('theme=dark');
     if (tabString) hashParts.push('tabs=' + encodeURIComponent(tabString));
-    if (hashParts.length > 0) window.history.replaceState(null, null, '#' + hashParts.join('&'));
-    else window.history.replaceState(null, null, window.location.pathname + window.location.search);
+    if (hashParts.length > 0) {
+      window.history.replaceState(null, null, '#' + hashParts.join('&'));
+    } else {
+      window.history.replaceState(null, null, window.location.pathname + window.location.search);
+    }
   }
 
   function loadFromUrlHash() {
@@ -1220,7 +1148,10 @@
       var hash = window.location.hash.substring(1);
       if (!hash) return;
       var params = {};
-      hash.split('&').forEach(function(part) { var item = part.split('='); if (item.length === 2) params[item[0]] = decodeURIComponent(item[1]); });
+      hash.split('&').forEach(function(part) {
+        var item = part.split('=');
+        if (item.length === 2) params[item[0]] = decodeURIComponent(item[1]);
+      });
       if (params['theme'] === 'dark') {
         document.documentElement.setAttribute('data-theme', 'dark');
         localStorage.setItem('app_theme', 'dark');
@@ -1229,9 +1160,14 @@
       }
       if (params['tabs']) {
         var newOrder = params['tabs'].split(',');
-        if (newOrder.length > 0) { savedTabOrder = newOrder; localStorage.setItem('tabOrder_v1', JSON.stringify(newOrder)); }
+        if (newOrder.length > 0) {
+          savedTabOrder = newOrder;
+          localStorage.setItem('tabOrder_v1', JSON.stringify(newOrder));
+        }
       }
-    } catch (e) { console.log('Error loading hash:', e); }
+    } catch (e) {
+      console.log('Error loading hash:', e);
+    }
   }
 </script>
 
